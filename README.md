@@ -24,6 +24,7 @@
 | LSP | mason.nvim + nvim-lspconfig |
 | Formatter | conform.nvim (Prettier / clang-format / stylua) |
 | Debugger | nvim-dap + nvim-dap-ui (C# via netcoredbg) |
+| Database | vim-dadbod + vim-dadbod-ui (SQL Server) |
 | Snippets | LuaSnip + friendly-snippets |
 | Theme | bearded-arc |
 
@@ -49,6 +50,7 @@ nvim
 | JDK + JavaFX SDK | Java (update the hardcoded path in `mappings.lua` to match your machine) |
 | .NET SDK | C# (`omnisharp`, `netcoredbg`) |
 | `node`/`npm` | Web LSPs |
+| `sqlcmd` | SQL Server access for the database explorer (see below) |
 
 ---
 
@@ -141,6 +143,51 @@ C# projects go through the shell `dn build`/`dn run`/`dn br` instead, since .NET
 
 UI opens automatically when a debug session starts and closes when it ends.
 
+### Database explorer
+
+| Keymap | Action |
+|---|---|
+| `<leader>Dp` | Pick a database from the server and open it in the explorer |
+| `<leader>Dt` | Toggle the explorer drawer |
+| `<leader>S` | Run the query in the buffer (or the visual selection) |
+| `<leader>W` | Save the query under "Saved queries" |
+
+The capital `D` is deliberate: lowercase `<leader>d` is the DAP prefix above.
+
+Inside the drawer: `Enter` expands/collapses, `R` refreshes, `A` adds a connection, `d` deletes one, `q` closes the drawer. Expanding a table offers List, Columns, Indexes, Foreign Keys, and more — each opens as a query you run with `<leader>S`.
+
+---
+
+## 🗄 Database explorer (SQL Server)
+
+`vim-dadbod` + `vim-dadbod-ui` browse databases, tables, columns, and rows inside Neovim, with no external GUI. The config lives in `lua/plugins/dadbod.lua`.
+
+**How it works:** `<leader>Dp` asks the server for its databases through `sqlcmd` and shows them in a picker. The chosen database becomes the explorer's connection. Nothing is hardcoded except `sa` on `localhost:1433`.
+
+### Setup
+
+1. Install `sqlcmd` (on Arch: `yay -S mssql-tools`).
+2. Put the SA password in an environment variable, kept outside this repo:
+
+```bash
+cat > ~/.secrets.zsh << 'EOF'
+export MSSQL_SA_PASSWORD='your_password_here'
+EOF
+chmod 600 ~/.secrets.zsh
+```
+
+Source it from your shell config (`[ -f ~/.secrets.zsh ] && source ~/.secrets.zsh`), and start Neovim from a shell where it is set. The password is read from the environment at runtime, so it never appears in this repo.
+
+3. If `sqlcmd` fails with a self-signed certificate error (ODBC Driver 18 encrypts by default), put a wrapper first in your `PATH`:
+
+```bash
+mkdir -p ~/.local/bin
+printf '#!/bin/bash\nexec /usr/bin/sqlcmd -C "$@"\n' > ~/.local/bin/sqlcmd
+chmod +x ~/.local/bin/sqlcmd
+```
+
+4. Test the connection: `sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -Q "SELECT name FROM sys.databases"`
+
 ---
 
 ## 🧩 Emmet (HTML/CSS/JS)
@@ -219,6 +266,7 @@ Managed by `lazy.nvim`, pinned in `lazy-lock.json`:
 `LuaSnip`, `friendly-snippets` — snippets
 `emmet-vim` — HTML/CSS abbreviation expansion
 `nvim-dap`, `nvim-dap-ui`, `nvim-nio`, `nvim-lightbulb` — debugging + code actions
+`vim-dadbod`, `vim-dadbod-ui` — SQL Server database explorer
 `nvim-tree.lua`, `nvim-web-devicons` — file explorer
 `bufferline.nvim` — buffer tabs
 `gitsigns.nvim` — git gutter signs
@@ -248,6 +296,7 @@ Managed by `lazy.nvim`, pinned in `lazy-lock.json`:
 │       ├── init.lua         # LSP, snippets, emmet, autopairs, etc.
 │       ├── bufferline.lua
 │       ├── csharp.lua       # nvim-lightbulb (code action hints)
+│       ├── dadbod.lua       # SQL Server explorer + database picker
 │       ├── dap.lua          # C# debugging setup
 │       ├── nvimtree.lua
 │       └── ufo.lua
